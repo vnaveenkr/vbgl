@@ -1,0 +1,262 @@
+<!doctype html>
+<!-- ©2024 Naveen Kumar Venkataraj -->
+<html lang="en">
+<head>
+	<title>Vibration glove controller</title>
+	<meta charset="utf-8" >
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" >
+</head>
+<style>
+html {
+	background: #eee;
+	font: 15px Ariel, sans-serif;
+}
+html, body, #main {
+	height: 100%;
+	margin: 0;
+}
+
+#main {
+	width: 20rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+#main > * {
+	margin: 3px;
+}
+
+button {
+	width: 10rem;
+}
+
+.inarea {
+	margin-top: 10px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.inarea > * {
+	margin: 3px;
+}
+
+.test_button {
+	border: none;
+	padding: 10px;
+	background: none;
+	font-size: 1.2rem;
+	font-weight: bold;
+	width: 2rem;
+}
+
+#testonesub {
+	display: flex;
+	flex-direction: row;
+}
+
+</style>
+<body>
+<div id="main">
+	<button onclick="startScan()" >Scan devices</button>
+	<button id="discon" onclick="disconnect()" disabled >
+			Disconnect device
+	</button>
+	<label>
+		Device name:
+		<input type="text" readonly="readonly" value="-- None --" 
+			id="devname" style="width:8rem; text-align: center;" />
+	</label>
+	<label>
+		Function:
+		<select onChange="setFunction(parseInt(this.value))" autocomplete="off" 
+			disabled id="param0">
+			<option value="0" selected >Turn off </option>
+			<option value="1" >Test all </option>
+			<option value="2" >Test one</option>
+			<option value="3" >Random1 both</option>
+			<option value="4" >Random1 left</option>
+			<option value="5" >Random1 right</option>
+			<option value="6" >Random8 both</option>
+			<option value="7" >Random8 left</option>
+			<option value="8" >Random8 right</option>
+		</select>
+	</label>
+	<div id="paramcommon" class="inarea">
+		<label>
+			Avg. on time:
+			<input id="param1" type="number" style="width:3rem"
+				onchange="enParamsApply()" />
+			x100ms
+		</label>
+		<label>
+			Avg. off time:
+			<input id="param2" type="number" style="width:3rem"
+				onchange="enParamsApply()" />
+			x100ms
+		</label>
+		<button id="params" onclick="randPat()">Apply</button>
+		<button id="savebut" onclick="saveValues()">Save</button>
+	</div>
+	<div id="testone" class="inarea">
+		<div id="testonesub" >
+		</div>
+	</div>
+	<div id="applyonly" class="inarea" onclick="applyOnly()">
+		<button>Apply</button>
+	</div>
+</div>
+
+<script>
+const serviceId = 'd9ce3f09-3545-4ada-84f0-edc86dfdcd0f';
+const charId = 0xff01;
+const charIdSave = 0xff02;
+let bleDev = null;
+let attrSave = null;
+let attr = null;
+
+(() => {
+	let e = document.querySelector('#testonesub');
+	for (let i = 0; i < 8; i++) {
+		let but = document.createElement('button');
+		but.classList.add('test_button');
+		but.textContent = (i + 1).toString();
+		but.addEventListener('click', (evt) => {
+			document.querySelectorAll('.test_button').forEach((elem) => {
+				elem.style.background = 'none';
+			});
+			evt.target.style.background = '#aaa'
+			setIoPin(i);
+		});
+		e.appendChild(but);
+	}
+	document.querySelectorAll('.inarea').forEach((elem) => {
+		elem.style.display = 'none';
+	});
+})()
+
+function setNoDev()
+{
+	attr = null;
+	server = null;
+	attrSave = null;
+	document.querySelector("#devname").value = " --none--";
+	document.querySelectorAll('.inarea').
+		forEach((e) => { e.style.display = 'none'});
+	document.querySelector('#param0').disabled = true;
+}
+
+function onDisconnect(event) {
+	setNoDev();
+	alert("Device disconnected")
+}
+
+function setError(error) {
+	setNoDev();
+	alert("No device connected");
+}
+function enParamsApply() {
+	document.querySelector("#params").disabled = false;
+	document.querySelector("#savebut").disabled = true;
+}
+
+function startScan() {
+	// navigator.bluetooth.requestDevice({filters: [{services: [serviceId]}]})
+	navigator.bluetooth.requestDevice({acceptAllDevices: true,
+		 optionalServices: [serviceId]})
+	.then (device => {
+		bleDev = device;
+		return device.gatt.connect();
+	})
+	.then(server => server.getPrimaryService(serviceId))
+	.then(service => {
+		return service.getCharacteristic(charIdSave).then(chr => {
+			attrSave = chr;
+			return service;
+		}).catch(setError);
+	})
+	.then(service => service.getCharacteristic(charId))
+	.then(chr => {
+		attr = chr;
+		return attr.readValue();
+	})
+	.then(val => getValues(val))
+	.catch (setError);
+}
+
+function writeParams(params) {
+	if (!attr)
+		return;
+	attr.writeValueWithoutResponse(new Uint16Array(params))
+	.catch (error => {
+		alert("Failed to write values");
+	});
+}
+
+function saveValues() {
+	if (!attrSave)
+		return;
+	const params = [1];
+	attrSave.writeValueWithoutResponse(new Uint8Array(params))
+	.catch (error => {
+		alert("Failed to write save");
+	});
+	document.querySelector("#savebut").disabled = true;
+}
+
+function getValues(val) {
+	let param0 = val.getUint16(0, 1);
+
+	document.querySelector("#devname").value = bleDev.name;
+	document.querySelector('#param0').disabled = false;
+	document.querySelector('#param0').value = param0.toString();
+	document.querySelector('#param1').value = val.getUint16(2, 1);
+	document.querySelector('#param2').value = val.getUint16(4, 1);
+	bleDev.addEventListener('gattserverdisconnected', onDisconnect);
+	document.querySelector('#discon').disabled = false;
+	document.querySelector("#params").disabled = true;
+	document.querySelector("#savebut").disabled = false;
+	setFunction(param0);
+}
+
+function disconnect() {
+	if (bleDev && bleDev.gatt.connected) {
+		bleDev.gatt.disconnect();
+		setNoDev();
+	}
+}
+
+function setIoPin(x) {
+	writeParams([2, x, 0])	
+}
+
+function applyOnly() {
+	let x = parseInt(document.querySelector("#param0").value);
+	writeParams([x, 0, 0]);
+}
+
+function randPat() {
+	let x = parseInt(document.querySelector("#param0").value);
+	writeParams([x, 
+		document.querySelector("#param1").value,
+		document.querySelector("#param2").value,
+	]);
+	document.querySelector("#savebut").disabled = false;
+	document.querySelector("#params").disabled = true;
+}
+
+function setFunction(x) {
+	document.querySelectorAll('.inarea').forEach((elem) => {
+		elem.style.display = 'none';
+	});
+	const functionInarea = [
+		'#applyonly', '#applyonly',
+		'#testone',
+		'#paramcommon', '#paramcommon', '#paramcommon',
+		'#paramcommon', '#paramcommon', '#paramcommon'
+	];
+	document.querySelector(functionInarea[x]).style.display = 'flex';
+}
+</script>
+</html>
