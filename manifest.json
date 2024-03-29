@@ -1,6 +1,6 @@
 {
 	"name": "Vibration glove controller",
-	"start_url": "/vbgl",
+	"start_url": "/vbgl/",
 	"display": "standalone",
 	"icons": [{"src": "vbgl.png", "sizes": "512x512"}]
 }
