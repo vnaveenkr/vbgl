@@ -10,7 +10,7 @@
 <style>
 html {
 	background: #eee;
-	font: 15px Ariel, sans-serif;
+	font: 18px Ariel, sans-serif;
 }
 html, body, #main {
 	height: 100%;
@@ -18,14 +18,15 @@ html, body, #main {
 }
 
 #main {
-	width: 20rem;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	justify-content: center;
 }
 
-#main > * {
+#main * {
 	margin: 3px;
+	font-size: 18px;
 }
 
 button {
@@ -87,13 +88,13 @@ button {
 	<div id="paramcommon" class="inarea">
 		<label>
 			Avg. on time:
-			<input id="param1" type="number" style="width:3rem"
+			<input id="param1" type="number" min="5" max="20" style="width:3rem"
 				onchange="enParamsApply()" />
 			x100ms
 		</label>
 		<label>
 			Avg. off time:
-			<input id="param2" type="number" style="width:3rem"
+			<input id="param2" type="number" min="10" max="100" style="width:3rem"
 				onchange="enParamsApply()" />
 			x100ms
 		</label>
