@@ -72,30 +72,21 @@ button {
 	</label>
 	<label>
 		Function:
-		<select onChange="setFunction(parseInt(this.value))" autocomplete="off" 
-			disabled id="param0">
-			<option value="0" selected >Turn off </option>
-			<option value="1" >Test all </option>
-			<option value="2" >Test one</option>
-			<option value="3" >Random1 both</option>
-			<option value="4" >Random1 left</option>
-			<option value="5" >Random1 right</option>
-			<option value="6" >Random8 both</option>
-			<option value="7" >Random8 left</option>
-			<option value="8" >Random8 right</option>
+		<select id="modeselect"onChange="setFunction(parseInt(this.value))"
+			autocomplete="off" disabled >
 		</select>
 	</label>
 	<div id="paramcommon" class="inarea">
 		<label>
 			Avg. on time:
-			<input id="param1" type="number" min="5" max="20" style="width:3rem"
-				onchange="enParamsApply()" />
+			<input id="param1" type="number"
+				style="width:3rem" onchange="enParamsApply(this)" />
 			x100ms
 		</label>
 		<label>
 			Avg. off time:
-			<input id="param2" type="number" min="10" max="100" style="width:3rem"
-				onchange="enParamsApply()" />
+			<input id="param2" type="number"
+				style="width:3rem" onchange="enParamsApply(this)" />
 			x100ms
 		</label>
 		<button id="params" onclick="randPat()">Apply</button>
@@ -117,9 +108,28 @@ const charIdSave = 0xff02;
 let bleDev = null;
 let attrSave = null;
 let attr = null;
+const modeDetails = [
+	{name: "Turn off", dispDiv: "applyonly"},
+	{name: "Test all", dispDiv: "applyonly"},
+	{name: "Test one", dispDiv: "testone"},
+	{name: "Random1 both", dispDiv: "paramcommon", range: [5, 30, 40, 320]},
+	{name: "Random1 left", dispDiv: "paramcommon", range: [5, 30, 20, 160]},
+	{name: "Random1 right", dispDiv: "paramcommon", range: [5, 30, 20, 120]},
+	{name: "Random8 both", dispDiv: "paramcommon", range: [5, 30, 40, 320]},
+	{name: "Random8 left", dispDiv: "paramcommon", range: [5, 30, 20, 160]},
+	{name: "Random8 right", dispDiv: "paramcommon", range: [5, 30, 20, 160]}
+];
 
-(() => {
-	let e = document.querySelector('#testonesub');
+function setModes() {
+	const opts = document.querySelector("#modeselect").options;
+	modeDetails.forEach((v, i) => {
+		opts[i] = new Option(v.name, i);
+	});
+	opts[0].selected = true;
+}
+
+function createTestone() {
+	const e = document.querySelector('#testonesub');
 	for (let i = 0; i < 8; i++) {
 		let but = document.createElement('button');
 		but.classList.add('test_button');
@@ -133,10 +143,31 @@ let attr = null;
 		});
 		e.appendChild(but);
 	}
+}
+
+function init() {
 	document.querySelectorAll('.inarea').forEach((elem) => {
 		elem.style.display = 'none';
 	});
-})()
+	setModes();
+	createTestone();
+}
+
+function validateParams()
+{
+	
+	const modeDesc = modeDetails[document.querySelector("#modeselect").value];
+	const p1 = document.querySelector("#param1");
+	if (!p1.checkValidity()) {
+		alert("Invalid parameter value for param1, reset to default");
+		p1.value = modeDesc.range[0];
+	}
+	const p2 = document.querySelector("#param2");
+	if (!p2.checkValidity()) {
+		alert("Invalid parameter value for param2, reset to default");
+		p2.value = modeDesc.range[2];
+	}
+}
 
 function setNoDev()
 {
@@ -146,7 +177,7 @@ function setNoDev()
 	document.querySelector("#devname").value = " --none--";
 	document.querySelectorAll('.inarea').
 		forEach((e) => { e.style.display = 'none'});
-	document.querySelector('#param0').disabled = true;
+	document.querySelector('#modeselect').disabled = true;
 }
 
 function onDisconnect(event) {
@@ -158,7 +189,8 @@ function setError(error) {
 	setNoDev();
 	alert("No device connected");
 }
-function enParamsApply() {
+function enParamsApply(elem) {
+	validateParams();
 	document.querySelector("#params").disabled = false;
 	document.querySelector("#savebut").disabled = true;
 }
@@ -211,10 +243,11 @@ function getValues(val) {
 	let param0 = val.getUint16(0, 1);
 
 	document.querySelector("#devname").value = bleDev.name;
-	document.querySelector('#param0').disabled = false;
-	document.querySelector('#param0').value = param0.toString();
+	document.querySelector('#modeselect').disabled = false;
+	document.querySelector('#modeselect').value = param0.toString();
 	document.querySelector('#param1').value = val.getUint16(2, 1);
 	document.querySelector('#param2').value = val.getUint16(4, 1);
+	// validateParams();
 	bleDev.addEventListener('gattserverdisconnected', onDisconnect);
 	document.querySelector('#discon').disabled = false;
 	document.querySelector("#params").disabled = true;
@@ -234,12 +267,13 @@ function setIoPin(x) {
 }
 
 function applyOnly() {
-	let x = parseInt(document.querySelector("#param0").value);
+	let x = parseInt(document.querySelector("#modeselect").value);
 	writeParams([x, 0, 0]);
 }
 
 function randPat() {
-	let x = parseInt(document.querySelector("#param0").value);
+	validateParams();
+	let x = parseInt(document.querySelector("#modeselect").value);
 	writeParams([x, 
 		document.querySelector("#param1").value,
 		document.querySelector("#param2").value,
@@ -252,14 +286,15 @@ function setFunction(x) {
 	document.querySelectorAll('.inarea').forEach((elem) => {
 		elem.style.display = 'none';
 	});
-	const functionInarea = [
-		'#applyonly', '#applyonly',
-		'#testone',
-		'#paramcommon', '#paramcommon', '#paramcommon',
-		'#paramcommon', '#paramcommon', '#paramcommon'
-	];
-	document.querySelector(functionInarea[x]).style.display = 'flex';
+	document.getElementById(modeDetails[x].dispDiv).style.display = 'flex';
+	if (typeof modeDetails[x].range !== 'undefined') {
+ 		document.querySelector("#param1").min = modeDetails[x].range[0];
+	 	document.querySelector("#param1").max = modeDetails[x].range[1];
+	 	document.querySelector("#param2").min = modeDetails[x].range[2];
+	 	document.querySelector("#param2").max = modeDetails[x].range[3];
+	}
 }
+init();
 </script>
 <script>
 if('serviceWorker' in navigator) {
