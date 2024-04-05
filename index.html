@@ -189,6 +189,7 @@ function setError(error) {
 	setNoDev();
 	alert("No device connected");
 }
+
 function enParamsApply(elem) {
 	validateParams();
 	document.querySelector("#params").disabled = false;
@@ -295,10 +296,5 @@ function setFunction(x) {
 	}
 }
 init();
-</script>
-<script>
-if('serviceWorker' in navigator) {
-	navigator.serviceWorker.register('sw.js', { scope: '/vbgl/' });
-}
 </script>
 </html>
